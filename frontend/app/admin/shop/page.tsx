@@ -7,36 +7,34 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ShoppingBag, Coins } from "lucide-react";
 
-interface News {
+interface ShopItem {
   id: number;
-  title: string;
-  tag: string;
-  created_at: string;
+  name: string;
+  price_coins: number;
+  stock?: number;
 }
 
-export default function AdminNewsPage() {
-  const [news, setNews] = useState<News[]>([]);
+export default function AdminShopPage() {
+  const [items, setItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<News[]>("/api/news")
-      .then(setNews)
+    api<ShopItem[]>("/api/shop")
+      .then(setItems)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Delete this news article?")) return;
-    // Optimistic: remove from list immediately
-    const prev = news;
-    setNews(news.filter((n) => n.id !== id));
+    if (!confirm("Delete this shop item?")) return;
+    const prev = items;
+    setItems(items.filter((i) => i.id !== id));
     try {
-      await api(`/api/news/${id}`, { method: "DELETE" });
+      await api(`/api/shop/${id}`, { method: "DELETE" });
     } catch (err) {
-      // Revert on error
-      setNews(prev);
+      setItems(prev);
       console.error(err);
     }
   };
@@ -44,9 +42,11 @@ export default function AdminNewsPage() {
   return (
     <div className="px-4 pt-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">News CMS</h1>
+        <h1 className="text-xl font-bold flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5" /> Shop Manager
+        </h1>
         <Button asChild size="sm">
-          <Link href="/admin/news/create">
+          <Link href="/admin/shop/create">
             <Plus className="h-4 w-4 mr-1" /> Create
           </Link>
         </Button>
@@ -54,25 +54,25 @@ export default function AdminNewsPage() {
 
       <div className="space-y-2">
         {loading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : news.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">No news yet.</p>
+          [1, 2].map((i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-xl" />
+          ))
+        ) : items.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No shop items yet.</p>
         ) : (
-          news.map((item) => (
+          items.map((item) => (
             <Card key={item.id}>
               <CardContent className="pt-4 flex items-center justify-between">
-                <div className="flex-1 min-w-0 space-y-0.5">
+                <div className="space-y-0.5">
+                  <h3 className="font-medium text-sm">{item.name}</h3>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">#{item.tag}</Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(item.created_at).toLocaleDateString()}
-                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      <Coins className="h-3 w-3 mr-1 text-yellow-500" />{item.price_coins} coins
+                    </Badge>
+                    {item.stock !== undefined && item.stock >= 0 && (
+                      <span className="text-xs text-muted-foreground">{item.stock} in stock</span>
+                    )}
                   </div>
-                  <h3 className="font-medium text-sm truncate">{item.title}</h3>
                 </div>
                 <Button
                   variant="ghost"

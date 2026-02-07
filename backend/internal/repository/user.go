@@ -74,3 +74,61 @@ func (r *UserRepository) UpdateSchoolData(ctx context.Context, userID int64, sch
 		userID, schoolLogin, schoolLevel, schoolXP, auditRatio,
 	))
 }
+
+func (r *UserRepository) PromoteToAdmin(ctx context.Context, userID int64) (*model.User, error) {
+	return scanUser(r.pool.QueryRow(ctx,
+		`UPDATE users SET role = 'admin', updated_at = NOW() WHERE id = $1 RETURNING `+userColumns,
+		userID,
+	))
+}
+
+func (r *UserRepository) GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEntry, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, first_name, last_name, username, photo_url, coins, school_level
+		 FROM users ORDER BY coins DESC LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var entries []LeaderboardEntry
+	rank := 1
+	for rows.Next() {
+		var e LeaderboardEntry
+		if err := rows.Scan(&e.UserID, &e.FirstName, &e.LastName, &e.Username, &e.PhotoURL, &e.Coins, &e.SchoolLevel); err != nil {
+			return nil, err
+		}
+		e.Rank = rank
+		rank++
+		entries = append(entries, e)
+	}
+	return entries, nil
+}
+
+// LeaderboardEntry is a flat struct for leaderboard queries.
+type LeaderboardEntry struct {
+	Rank        int
+	UserID      int64
+	FirstName   string
+	LastName    string
+	Username    string
+	PhotoURL    string
+	Coins       int
+	SchoolLevel int
+}
+
+func (r *UserRepository) ListAllTelegramIDs(ctx context.Context) ([]int64, error) {
+	rows, err := r.pool.Query(ctx, `SELECT telegram_id FROM users`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}

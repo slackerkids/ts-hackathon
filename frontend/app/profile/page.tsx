@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,15 +11,31 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QRCodeSVG } from "qrcode.react";
-import { User as UserIcon, GraduationCap, Coins, Shield, QrCode, School } from "lucide-react";
+import { User as UserIcon, GraduationCap, Coins, Shield, QrCode, School, CalendarCheck } from "lucide-react";
+
+interface AttendanceRecord {
+  id: number;
+  event_name: string;
+  coins_awarded: number;
+  created_at: string;
+}
 
 export default function ProfilePage() {
   const { user, loading, refreshUser } = useUser();
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [showVerify, setShowVerify] = useState(false);
   const [schoolUser, setSchoolUser] = useState("");
   const [schoolPass, setSchoolPass] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      api<AttendanceRecord[]>("/api/attendance/history")
+        .then(setAttendance)
+        .catch(console.error);
+    }
+  }, [user]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,6 +179,32 @@ export default function ProfilePage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Attendance History */}
+      {attendance.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarCheck className="h-5 w-5" /> Attendance History
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {attendance.map((record) => (
+              <div key={record.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                <div>
+                  <p className="text-sm font-medium">{record.event_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(record.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  <Coins className="h-3 w-3 mr-1 text-yellow-500" />+{record.coins_awarded}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* School Verification (for guests only) */}
       {user.role === "guest" && (

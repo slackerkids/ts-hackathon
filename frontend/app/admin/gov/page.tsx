@@ -42,10 +42,14 @@ export default function AdminGovPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Remove this government member?")) return;
+    // Optimistic: remove from list immediately
+    const prev = members;
+    setMembers(members.filter((m) => m.id !== id));
     try {
       await api(`/api/gov/${id}`, { method: "DELETE" });
-      setMembers(members.filter((m) => m.id !== id));
     } catch (err) {
+      // Revert on error
+      setMembers(prev);
       console.error(err);
     }
   };

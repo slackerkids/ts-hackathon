@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Users, Download } from "lucide-react";
 
 interface Application {
   id: number;
@@ -43,10 +43,38 @@ export default function HackathonApplicationsPage() {
         <ArrowLeft className="h-4 w-4 mr-1" /> Back
       </Button>
 
-      <div className="flex items-center gap-2">
-        <Users className="h-5 w-5" />
-        <h1 className="text-xl font-bold">Applications</h1>
-        <Badge variant="secondary">{apps.length}</Badge>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          <h1 className="text-xl font-bold">Applications</h1>
+          <Badge variant="secondary">{apps.length}</Badge>
+        </div>
+        {apps.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const headers = ["Name", "Username", "Team", "Status", "Date"];
+              const rows = apps.map((a) => [
+                `${a.user?.first_name || ""} ${a.user?.last_name || ""}`.trim() || "User",
+                a.user?.username || "",
+                a.team_name || "",
+                a.status,
+                new Date(a.created_at).toLocaleDateString(),
+              ]);
+              const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+              const blob = new Blob([csv], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `applications-${params.id}.csv`;
+              link.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            <Download className="h-4 w-4 mr-1" /> CSV
+          </Button>
+        )}
       </div>
 
       <div className="space-y-2">

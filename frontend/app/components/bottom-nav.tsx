@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Newspaper, Trophy, Users, Landmark, User } from "lucide-react";
+import { Home, Newspaper, Trophy, Users, ShoppingBag, User } from "lucide-react";
 
 const tabs = [
   { href: "/", label: "Home", icon: Home },
   { href: "/news", label: "News", icon: Newspaper },
   { href: "/hackathons", label: "Events", icon: Trophy },
   { href: "/clubs", label: "Clubs", icon: Users },
-  { href: "/gov", label: "Gov", icon: Landmark },
+  { href: "/shop", label: "Shop", icon: ShoppingBag },
   { href: "/profile", label: "Profile", icon: User },
 ];
 

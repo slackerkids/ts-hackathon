@@ -7,7 +7,8 @@ import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, Trophy, User, Settings, Coins, GraduationCap, Users, Landmark } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Newspaper, Trophy, User, Settings, Coins, GraduationCap, Users, Landmark, ShoppingBag, Crown } from "lucide-react";
 
 interface News {
   id: number;
@@ -26,10 +27,22 @@ interface Hackathon {
   end_date: string;
 }
 
+interface LeaderboardEntry {
+  rank: number;
+  user_id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  coins: number;
+  school_level?: number;
+}
+
 export default function Home() {
   const { user, loading: authLoading } = useUser();
   const [news, setNews] = useState<News[]>([]);
   const [hackathon, setHackathon] = useState<Hackathon | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,6 +51,7 @@ export default function Home() {
       api<Hackathon[]>("/api/hackathons?status=active").then((data) => {
         if (data.length > 0) setHackathon(data[0]);
       }),
+      api<LeaderboardEntry[]>("/api/leaderboard").then(setLeaderboard).catch(() => {}),
     ])
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -105,6 +119,47 @@ export default function Home() {
               </CardContent>
             </Card>
           </Link>
+        </section>
+      )}
+
+      {/* Leaderboard */}
+      {leaderboard.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Crown className="h-5 w-5 text-yellow-500" />
+            <h2 className="text-lg font-semibold">Leaderboard</h2>
+          </div>
+          <Card>
+            <CardContent className="pt-4 space-y-2">
+              {leaderboard.slice(0, 5).map((entry) => (
+                <div
+                  key={entry.user_id}
+                  className={`flex items-center gap-3 py-2 ${
+                    user && entry.user_id === user.id ? "bg-primary/10 -mx-2 px-2 rounded-lg" : ""
+                  }`}
+                >
+                  <span className="text-sm font-bold w-6 text-center text-muted-foreground">
+                    {entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : entry.rank === 3 ? "🥉" : `#${entry.rank}`}
+                  </span>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={entry.photo_url} />
+                    <AvatarFallback className="text-xs">
+                      {entry.first_name?.[0] || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {entry.first_name} {entry.last_name || ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Coins className="h-3 w-3 text-yellow-500" />
+                    <span className="text-sm font-semibold">{entry.coins}</span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </section>
       )}
 
@@ -178,6 +233,14 @@ export default function Home() {
               <CardContent className="pt-4 flex flex-col items-center gap-2">
                 <Landmark className="h-6 w-6 text-primary" />
                 <span className="text-xs font-medium">Gov</span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/shop">
+            <Card className="hover:opacity-80 transition-opacity">
+              <CardContent className="pt-4 flex flex-col items-center gap-2">
+                <ShoppingBag className="h-6 w-6 text-primary" />
+                <span className="text-xs font-medium">Shop</span>
               </CardContent>
             </Card>
           </Link>

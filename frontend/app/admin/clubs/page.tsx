@@ -28,10 +28,14 @@ export default function AdminClubsPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this club?")) return;
+    // Optimistic: remove from list immediately
+    const prev = clubs;
+    setClubs(clubs.filter((c) => c.id !== id));
     try {
       await api(`/api/clubs/${id}`, { method: "DELETE" });
-      setClubs(clubs.filter((c) => c.id !== id));
     } catch (err) {
+      // Revert on error
+      setClubs(prev);
       console.error(err);
     }
   };

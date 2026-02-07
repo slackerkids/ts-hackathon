@@ -36,6 +36,8 @@ var publicGETPrefixes = []string{
 	"/api/hackathons",
 	"/api/clubs",
 	"/api/gov",
+	"/api/leaderboard",
+	"/api/shop",
 }
 
 func isPublic(method, path string) bool {

@@ -30,10 +30,14 @@ export default function AdminHackathonsPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this hackathon?")) return;
+    // Optimistic: remove from list immediately
+    const prev = hackathons;
+    setHackathons(hackathons.filter((h) => h.id !== id));
     try {
       await api(`/api/hackathons/${id}`, { method: "DELETE" });
-      setHackathons(hackathons.filter((h) => h.id !== id));
     } catch (err) {
+      // Revert on error
+      setHackathons(prev);
       console.error(err);
     }
   };

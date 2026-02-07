@@ -2,27 +2,39 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/tomorrow-school/ts-hackathon/backend/generated"
+	"github.com/tomorrow-school/ts-hackathon/backend/internal/config"
+	"github.com/tomorrow-school/ts-hackathon/backend/internal/gateway"
 	"github.com/tomorrow-school/ts-hackathon/backend/internal/middleware"
 	"github.com/tomorrow-school/ts-hackathon/backend/internal/model"
+	"github.com/tomorrow-school/ts-hackathon/backend/internal/repository"
 	"github.com/tomorrow-school/ts-hackathon/backend/internal/service"
 )
 
 type Handler struct {
-	authService       *service.AuthService
-	schoolService     *service.SchoolService
-	newsService       *service.NewsService
-	hackathonService  *service.HackathonService
-	attendanceService *service.AttendanceService
-	clubService       *service.ClubService
-	govService        *service.GovService
+	cfg                *config.Config
+	authService        *service.AuthService
+	schoolService      *service.SchoolService
+	newsService        *service.NewsService
+	hackathonService   *service.HackathonService
+	attendanceService  *service.AttendanceService
+	clubService        *service.ClubService
+	govService         *service.GovService
+	leaderboardService *service.LeaderboardService
+	shopService        *service.ShopService
+	aiGateway          *gateway.AIGateway
+	telegramGateway    *gateway.TelegramGateway
+	userRepo           *repository.UserRepository
 }
 
 var _ generated.ServerInterface = (*Handler)(nil)
 
 func NewHandler(
+	cfg *config.Config,
 	authService *service.AuthService,
 	schoolService *service.SchoolService,
 	newsService *service.NewsService,
@@ -30,15 +42,26 @@ func NewHandler(
 	attendanceService *service.AttendanceService,
 	clubService *service.ClubService,
 	govService *service.GovService,
+	leaderboardService *service.LeaderboardService,
+	shopService *service.ShopService,
+	aiGateway *gateway.AIGateway,
+	telegramGateway *gateway.TelegramGateway,
+	userRepo *repository.UserRepository,
 ) *Handler {
 	return &Handler{
-		authService:       authService,
-		schoolService:     schoolService,
-		newsService:       newsService,
-		hackathonService:  hackathonService,
-		attendanceService: attendanceService,
-		clubService:       clubService,
-		govService:        govService,
+		cfg:                cfg,
+		authService:        authService,
+		schoolService:      schoolService,
+		newsService:        newsService,
+		hackathonService:   hackathonService,
+		attendanceService:  attendanceService,
+		clubService:        clubService,
+		govService:         govService,
+		leaderboardService: leaderboardService,
+		shopService:        shopService,
+		aiGateway:          aiGateway,
+		telegramGateway:    telegramGateway,
+		userRepo:           userRepo,
 	}
 }
 
@@ -78,6 +101,29 @@ func (h *Handler) AuthSchool(w http.ResponseWriter, r *http.Request) {
 	updated, err := h.schoolService.VerifyStudent(r.Context(), user.ID, req.Username, req.Password)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, generated.ErrorResponse{Error: err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, userToGenerated(updated))
+}
+
+func (h *Handler) AuthAdmin(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, generated.ErrorResponse{Error: "unauthorized"})
+		return
+	}
+	var req generated.AdminAuthRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, generated.ErrorResponse{Error: "invalid request body"})
+		return
+	}
+	if req.Username != h.cfg.AdminUsername || req.Password != h.cfg.AdminPassword {
+		writeJSON(w, http.StatusUnauthorized, generated.ErrorResponse{Error: "invalid admin credentials"})
+		return
+	}
+	updated, err := h.userRepo.PromoteToAdmin(r.Context(), user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, generated.ErrorResponse{Error: err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, userToGenerated(updated))
@@ -145,6 +191,18 @@ func (h *Handler) CreateNews(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, generated.ErrorResponse{Error: err.Error()})
 		return
 	}
+
+	// Broadcast push notification to all users
+	go func() {
+		ids, err := h.userRepo.ListAllTelegramIDs(r.Context())
+		if err != nil {
+			log.Printf("Failed to list users for broadcast: %v", err)
+			return
+		}
+		msg := fmt.Sprintf("<b>%s</b>\n\n%s", result.Title, truncate(result.Content, 200))
+		h.telegramGateway.Broadcast(ids, msg)
+	}()
+
 	writeJSON(w, http.StatusCreated, newsToGenerated(result))
 }
 
@@ -489,6 +547,117 @@ func (h *Handler) DeleteGovMember(w http.ResponseWriter, r *http.Request, id int
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ─── Leaderboard ─────────────────────────────────────────────────────────────
+
+func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	entries, err := h.leaderboardService.GetTop(r.Context(), 10)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, generated.ErrorResponse{Error: err.Error()})
+		return
+	}
+	result := make([]generated.LeaderboardEntry, len(entries))
+	for i, e := range entries {
+		result[i] = generated.LeaderboardEntry{
+			Rank:        e.Rank,
+			UserId:      e.UserID,
+			FirstName:   e.FirstName,
+			LastName:    strPtr(e.LastName),
+			Username:    strPtr(e.Username),
+			PhotoUrl:    strPtr(e.PhotoURL),
+			Coins:       e.Coins,
+			SchoolLevel: intPtr(e.SchoolLevel),
+		}
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+// ─── Shop ────────────────────────────────────────────────────────────────────
+
+func (h *Handler) ListShopItems(w http.ResponseWriter, r *http.Request) {
+	items, err := h.shopService.ListItems(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, generated.ErrorResponse{Error: err.Error()})
+		return
+	}
+	result := make([]generated.ShopItem, len(items))
+	for i, item := range items {
+		result[i] = shopItemToGenerated(&item)
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) CreateShopItem(w http.ResponseWriter, r *http.Request) {
+	if !requireAdmin(w, middleware.UserFromContext(r.Context())) {
+		return
+	}
+	var req generated.ShopItemCreateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, generated.ErrorResponse{Error: "invalid request body"})
+		return
+	}
+	item := &model.ShopItem{Name: req.Name, PriceCoins: req.PriceCoins, Stock: -1}
+	if req.Description != nil {
+		item.Description = *req.Description
+	}
+	if req.ImageUrl != nil {
+		item.ImageURL = *req.ImageUrl
+	}
+	if req.Stock != nil {
+		item.Stock = *req.Stock
+	}
+	result, err := h.shopService.CreateItem(r.Context(), item)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, generated.ErrorResponse{Error: err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusCreated, shopItemToGenerated(result))
+}
+
+func (h *Handler) DeleteShopItem(w http.ResponseWriter, r *http.Request, id int64) {
+	if !requireAdmin(w, middleware.UserFromContext(r.Context())) {
+		return
+	}
+	if err := h.shopService.DeleteItem(r.Context(), id); err != nil {
+		writeJSON(w, http.StatusInternalServerError, generated.ErrorResponse{Error: err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) BuyShopItem(w http.ResponseWriter, r *http.Request, id int64) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, generated.ErrorResponse{Error: "unauthorized"})
+		return
+	}
+	purchase, err := h.shopService.Buy(r.Context(), user.ID, id)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, generated.ErrorResponse{Error: err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, purchaseToGenerated(purchase))
+}
+
+// ─── AI Summary ──────────────────────────────────────────────────────────────
+
+func (h *Handler) GetNewsSummary(w http.ResponseWriter, r *http.Request, id int64) {
+	n, err := h.newsService.GetByID(r.Context(), id)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, generated.ErrorResponse{Error: err.Error()})
+		return
+	}
+	if n == nil {
+		writeJSON(w, http.StatusNotFound, generated.ErrorResponse{Error: "news not found"})
+		return
+	}
+	summary, err := h.aiGateway.Summarize(n.Title, n.Content)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, generated.ErrorResponse{Error: err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, generated.NewsSummary{Summary: summary})
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 func requireAdmin(w http.ResponseWriter, user *model.User) bool {
@@ -597,4 +766,27 @@ func govToGenerated(g *model.GovMember) generated.GovMember {
 		PhotoUrl: strPtr(g.PhotoURL), ContactUrl: strPtr(g.ContactURL),
 		DisplayOrder: intPtr(g.DisplayOrder), CreatedAt: &g.CreatedAt,
 	}
+}
+
+func shopItemToGenerated(item *model.ShopItem) generated.ShopItem {
+	return generated.ShopItem{
+		Id: item.ID, Name: item.Name, Description: strPtr(item.Description),
+		ImageUrl: strPtr(item.ImageURL), PriceCoins: item.PriceCoins,
+		Stock: intPtr(item.Stock), CreatedAt: &item.CreatedAt,
+	}
+}
+
+func purchaseToGenerated(p *model.Purchase) generated.Purchase {
+	return generated.Purchase{
+		Id: p.ID, UserId: p.UserID, ItemId: p.ItemID,
+		ItemName: strPtr(p.ItemName), PriceCoins: intPtr(p.PriceCoins),
+		CreatedAt: &p.CreatedAt,
+	}
+}
+
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }

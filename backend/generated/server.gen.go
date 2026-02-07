@@ -40,6 +40,12 @@ const (
 	ListHackathonsParamsStatusPast   ListHackathonsParamsStatus = "past"
 )
 
+// AdminAuthRequest defines model for AdminAuthRequest.
+type AdminAuthRequest struct {
+	Password string `json:"password"`
+	Username string `json:"username"`
+}
+
 // Attendance defines model for Attendance.
 type Attendance struct {
 	CoinsAwarded int        `json:"coins_awarded"`
@@ -154,6 +160,18 @@ type HealthResponse struct {
 	Status string `json:"status"`
 }
 
+// LeaderboardEntry defines model for LeaderboardEntry.
+type LeaderboardEntry struct {
+	Coins       int     `json:"coins"`
+	FirstName   string  `json:"first_name"`
+	LastName    *string `json:"last_name,omitempty"`
+	PhotoUrl    *string `json:"photo_url,omitempty"`
+	Rank        int     `json:"rank"`
+	SchoolLevel *int    `json:"school_level,omitempty"`
+	UserId      int64   `json:"user_id"`
+	Username    *string `json:"username,omitempty"`
+}
+
 // News defines model for News.
 type News struct {
 	AuthorId  *int64     `json:"author_id,omitempty"`
@@ -174,10 +192,45 @@ type NewsCreateRequest struct {
 	Title    string  `json:"title"`
 }
 
+// NewsSummary defines model for NewsSummary.
+type NewsSummary struct {
+	Summary string `json:"summary"`
+}
+
+// Purchase defines model for Purchase.
+type Purchase struct {
+	CreatedAt  *time.Time `json:"created_at,omitempty"`
+	Id         int64      `json:"id"`
+	ItemId     int64      `json:"item_id"`
+	ItemName   *string    `json:"item_name,omitempty"`
+	PriceCoins *int       `json:"price_coins,omitempty"`
+	UserId     int64      `json:"user_id"`
+}
+
 // SchoolAuthRequest defines model for SchoolAuthRequest.
 type SchoolAuthRequest struct {
 	Password string `json:"password"`
 	Username string `json:"username"`
+}
+
+// ShopItem defines model for ShopItem.
+type ShopItem struct {
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	Id          int64      `json:"id"`
+	ImageUrl    *string    `json:"image_url,omitempty"`
+	Name        string     `json:"name"`
+	PriceCoins  int        `json:"price_coins"`
+	Stock       *int       `json:"stock,omitempty"`
+}
+
+// ShopItemCreateRequest defines model for ShopItemCreateRequest.
+type ShopItemCreateRequest struct {
+	Description *string `json:"description,omitempty"`
+	ImageUrl    *string `json:"image_url,omitempty"`
+	Name        string  `json:"name"`
+	PriceCoins  int     `json:"price_coins"`
+	Stock       *int    `json:"stock,omitempty"`
 }
 
 // User defines model for User.
@@ -217,6 +270,9 @@ type ListNewsParams struct {
 // AttendanceCheckInJSONRequestBody defines body for AttendanceCheckIn for application/json ContentType.
 type AttendanceCheckInJSONRequestBody = CheckInRequest
 
+// AuthAdminJSONRequestBody defines body for AuthAdmin for application/json ContentType.
+type AuthAdminJSONRequestBody = AdminAuthRequest
+
 // AuthSchoolJSONRequestBody defines body for AuthSchool for application/json ContentType.
 type AuthSchoolJSONRequestBody = SchoolAuthRequest
 
@@ -241,6 +297,9 @@ type CreateNewsJSONRequestBody = NewsCreateRequest
 // UpdateNewsJSONRequestBody defines body for UpdateNews for application/json ContentType.
 type UpdateNewsJSONRequestBody = NewsCreateRequest
 
+// CreateShopItemJSONRequestBody defines body for CreateShopItem for application/json ContentType.
+type CreateShopItemJSONRequestBody = ShopItemCreateRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Check in a student via QR (admin only)
@@ -249,6 +308,9 @@ type ServerInterface interface {
 	// Get current user attendance history
 	// (GET /api/attendance/history)
 	AttendanceHistory(w http.ResponseWriter, r *http.Request)
+	// Authenticate as admin with credentials
+	// (POST /api/auth/admin)
+	AuthAdmin(w http.ResponseWriter, r *http.Request)
 	// Verify student via school credentials
 	// (POST /api/auth/school)
 	AuthSchool(w http.ResponseWriter, r *http.Request)
@@ -303,6 +365,9 @@ type ServerInterface interface {
 	// Health check endpoint
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// Get top users by coins
+	// (GET /api/leaderboard)
+	GetLeaderboard(w http.ResponseWriter, r *http.Request)
 	// List news articles
 	// (GET /api/news)
 	ListNews(w http.ResponseWriter, r *http.Request, params ListNewsParams)
@@ -318,6 +383,21 @@ type ServerInterface interface {
 	// Update a news article (admin only)
 	// (PUT /api/news/{id})
 	UpdateNews(w http.ResponseWriter, r *http.Request, id int64)
+	// Get AI-generated summary for a news article
+	// (GET /api/news/{id}/summary)
+	GetNewsSummary(w http.ResponseWriter, r *http.Request, id int64)
+	// List shop items
+	// (GET /api/shop)
+	ListShopItems(w http.ResponseWriter, r *http.Request)
+	// Create a shop item (admin only)
+	// (POST /api/shop)
+	CreateShopItem(w http.ResponseWriter, r *http.Request)
+	// Delete a shop item (admin only)
+	// (DELETE /api/shop/{id})
+	DeleteShopItem(w http.ResponseWriter, r *http.Request, id int64)
+	// Buy a shop item with coins
+	// (POST /api/shop/{id}/buy)
+	BuyShopItem(w http.ResponseWriter, r *http.Request, id int64)
 	// Get current authenticated user
 	// (GET /api/users/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
@@ -351,6 +431,20 @@ func (siw *ServerInterfaceWrapper) AttendanceHistory(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AttendanceHistory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AuthAdmin operation middleware
+func (siw *ServerInterfaceWrapper) AuthAdmin(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AuthAdmin(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -724,6 +818,20 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// GetLeaderboard operation middleware
+func (siw *ServerInterfaceWrapper) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLeaderboard(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListNews operation middleware
 func (siw *ServerInterfaceWrapper) ListNews(w http.ResponseWriter, r *http.Request) {
 
@@ -831,6 +939,109 @@ func (siw *ServerInterfaceWrapper) UpdateNews(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateNews(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNewsSummary operation middleware
+func (siw *ServerInterfaceWrapper) GetNewsSummary(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNewsSummary(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListShopItems operation middleware
+func (siw *ServerInterfaceWrapper) ListShopItems(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListShopItems(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateShopItem operation middleware
+func (siw *ServerInterfaceWrapper) CreateShopItem(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateShopItem(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteShopItem operation middleware
+func (siw *ServerInterfaceWrapper) DeleteShopItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteShopItem(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BuyShopItem operation middleware
+func (siw *ServerInterfaceWrapper) BuyShopItem(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BuyShopItem(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -976,6 +1187,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc("POST "+options.BaseURL+"/api/attendance/check-in", wrapper.AttendanceCheckIn)
 	m.HandleFunc("GET "+options.BaseURL+"/api/attendance/history", wrapper.AttendanceHistory)
+	m.HandleFunc("POST "+options.BaseURL+"/api/auth/admin", wrapper.AuthAdmin)
 	m.HandleFunc("POST "+options.BaseURL+"/api/auth/school", wrapper.AuthSchool)
 	m.HandleFunc("POST "+options.BaseURL+"/api/auth/telegram", wrapper.AuthTelegram)
 	m.HandleFunc("GET "+options.BaseURL+"/api/clubs", wrapper.ListClubs)
@@ -994,11 +1206,17 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/api/hackathons/{id}/applications", wrapper.ListHackathonApplications)
 	m.HandleFunc("POST "+options.BaseURL+"/api/hackathons/{id}/apply", wrapper.ApplyToHackathon)
 	m.HandleFunc("GET "+options.BaseURL+"/api/health", wrapper.GetHealth)
+	m.HandleFunc("GET "+options.BaseURL+"/api/leaderboard", wrapper.GetLeaderboard)
 	m.HandleFunc("GET "+options.BaseURL+"/api/news", wrapper.ListNews)
 	m.HandleFunc("POST "+options.BaseURL+"/api/news", wrapper.CreateNews)
 	m.HandleFunc("DELETE "+options.BaseURL+"/api/news/{id}", wrapper.DeleteNews)
 	m.HandleFunc("GET "+options.BaseURL+"/api/news/{id}", wrapper.GetNews)
 	m.HandleFunc("PUT "+options.BaseURL+"/api/news/{id}", wrapper.UpdateNews)
+	m.HandleFunc("GET "+options.BaseURL+"/api/news/{id}/summary", wrapper.GetNewsSummary)
+	m.HandleFunc("GET "+options.BaseURL+"/api/shop", wrapper.ListShopItems)
+	m.HandleFunc("POST "+options.BaseURL+"/api/shop", wrapper.CreateShopItem)
+	m.HandleFunc("DELETE "+options.BaseURL+"/api/shop/{id}", wrapper.DeleteShopItem)
+	m.HandleFunc("POST "+options.BaseURL+"/api/shop/{id}/buy", wrapper.BuyShopItem)
 	m.HandleFunc("GET "+options.BaseURL+"/api/users/me", wrapper.GetMe)
 
 	return m
@@ -1007,41 +1225,48 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"rHSsRFAAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

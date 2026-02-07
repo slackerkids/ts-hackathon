@@ -39,10 +39,15 @@ export default function ClubDetailPage() {
 
   const handleJoin = async () => {
     setToggling(true);
+    // Optimistic update
+    const prev = club;
+    setClub((c) => c ? { ...c, is_member: true, member_count: (c.member_count ?? 0) + 1 } : c);
     try {
       const updated = await api<Club>(`/api/clubs/${params.id}/join`, { method: "POST" });
       setClub(updated);
     } catch (err) {
+      // Revert on error
+      setClub(prev);
       console.error(err);
     } finally {
       setToggling(false);
@@ -51,10 +56,14 @@ export default function ClubDetailPage() {
 
   const handleLeave = async () => {
     setToggling(true);
+    // Optimistic update
+    const prev = club;
+    setClub((c) => c ? { ...c, is_member: false, member_count: Math.max((c.member_count ?? 1) - 1, 0) } : c);
     try {
       await api(`/api/clubs/${params.id}/leave`, { method: "DELETE" });
-      setClub((prev) => prev ? { ...prev, is_member: false, member_count: (prev.member_count ?? 1) - 1 } : prev);
     } catch (err) {
+      // Revert on error
+      setClub(prev);
       console.error(err);
     } finally {
       setToggling(false);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Newspaper, Trophy, QrCode, Users, Landmark } from "lucide-react";
+import { Newspaper, Trophy, QrCode, Users, Landmark, ShoppingBag } from "lucide-react";
 
 const adminActions = [
   { href: "/admin/news", label: "News CMS", icon: Newspaper },
@@ -10,6 +10,7 @@ const adminActions = [
   { href: "/admin/scanner", label: "QR Scanner", icon: QrCode },
   { href: "/admin/clubs", label: "Clubs", icon: Users },
   { href: "/admin/gov", label: "Government", icon: Landmark },
+  { href: "/admin/shop", label: "Shop", icon: ShoppingBag },
 ];
 
 export default function AdminPage() {

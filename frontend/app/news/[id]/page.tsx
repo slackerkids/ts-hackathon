@@ -5,8 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 
 interface News {
   id: number;
@@ -23,6 +24,22 @@ export default function NewsDetailPage() {
   const [news, setNews] = useState<News | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  const handleSummarize = async () => {
+    setSummarizing(true);
+    setSummaryError(null);
+    try {
+      const res = await api<{ summary: string }>(`/api/news/${params.id}/summary`);
+      setSummary(res.summary);
+    } catch (err) {
+      setSummaryError(err instanceof Error ? err.message : "Failed to generate summary");
+    } finally {
+      setSummarizing(false);
+    }
+  };
 
   useEffect(() => {
     api<News>(`/api/news/${params.id}`)
@@ -73,6 +90,27 @@ export default function NewsDetailPage() {
       </div>
 
       <h1 className="text-2xl font-bold">{news.title}</h1>
+
+      {/* AI Summary */}
+      {summary ? (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="pt-4 space-y-1">
+            <div className="flex items-center gap-1 text-xs text-primary font-medium">
+              <Sparkles className="h-3 w-3" /> AI Summary
+            </div>
+            <p className="text-sm leading-relaxed">{summary}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Button variant="outline" size="sm" onClick={handleSummarize} disabled={summarizing}>
+          <Sparkles className="h-4 w-4 mr-1" />
+          {summarizing ? "Summarizing..." : "Summarize with AI"}
+        </Button>
+      )}
+      {summaryError && (
+        <p className="text-destructive text-sm">{summaryError}</p>
+      )}
+
       <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed">
         {news.content}
       </div>

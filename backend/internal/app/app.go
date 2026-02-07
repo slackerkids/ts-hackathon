@@ -41,6 +41,8 @@ func New(cfg *config.Config) (*App, error) {
 
 	// Gateways
 	schoolGW := gateway.NewSchoolGateway()
+	telegramGW := gateway.NewTelegramGateway(cfg.BotToken)
+	aiGW := gateway.NewAIGateway(cfg.OpenAIAPIKey)
 
 	// Repositories
 	userRepo := repository.NewUserRepository(pool)
@@ -49,6 +51,7 @@ func New(cfg *config.Config) (*App, error) {
 	attendanceRepo := repository.NewAttendanceRepository(pool)
 	clubRepo := repository.NewClubRepository(pool)
 	govRepo := repository.NewGovRepository(pool)
+	shopRepo := repository.NewShopRepository(pool)
 
 	// Services
 	authService := service.NewAuthService(cfg.BotToken, userRepo)
@@ -58,9 +61,11 @@ func New(cfg *config.Config) (*App, error) {
 	attendanceService := service.NewAttendanceService(attendanceRepo)
 	clubService := service.NewClubService(clubRepo)
 	govService := service.NewGovService(govRepo)
+	leaderboardService := service.NewLeaderboardService(userRepo)
+	shopService := service.NewShopService(shopRepo)
 
 	// Handler
-	h := handler.NewHandler(authService, schoolService, newsService, hackathonService, attendanceService, clubService, govService)
+	h := handler.NewHandler(cfg, authService, schoolService, newsService, hackathonService, attendanceService, clubService, govService, leaderboardService, shopService, aiGW, telegramGW, userRepo)
 
 	// Router
 	mux := http.NewServeMux()

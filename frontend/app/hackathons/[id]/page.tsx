@@ -41,13 +41,16 @@ export default function HackathonDetailPage() {
   const handleApply = async () => {
     setApplying(true);
     setApplyError(null);
+    // Optimistic: show applied immediately
+    setApplied(true);
     try {
       await api(`/api/hackathons/${params.id}/apply`, {
         method: "POST",
         body: JSON.stringify({ team_name: teamName || undefined }),
       });
-      setApplied(true);
     } catch (err) {
+      // Revert on error
+      setApplied(false);
       setApplyError(err instanceof Error ? err.message : "Failed to apply");
     } finally {
       setApplying(false);
