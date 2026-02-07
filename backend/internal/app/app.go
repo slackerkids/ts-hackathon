@@ -41,17 +41,26 @@ func New(cfg *config.Config) (*App, error) {
 	}
 	log.Println("Connected to PostgreSQL")
 
-	// Initialize layers
+	// Initialize repositories
 	userRepo := repository.NewUserRepository(pool)
+	newsRepo := repository.NewNewsRepository(pool)
+	hackathonRepo := repository.NewHackathonRepository(pool)
+
+	// Initialize services
 	authService := service.NewAuthService(cfg.BotToken, userRepo)
-	h := handler.NewHandler(authService)
+	newsService := service.NewNewsService(newsRepo)
+	hackathonService := service.NewHackathonService(hackathonRepo)
+
+	// Initialize handler
+	h := handler.NewHandler(authService, newsService, hackathonService)
 
 	// Set up router with generated routes
 	mux := http.NewServeMux()
 	generated.HandlerFromMux(h, mux)
 
-	// Apply middleware chain
-	var httpHandler http.Handler = mux
+	// Apply middleware chain: auth -> CORS -> mux
+	authMW := middleware.Auth(cfg.BotToken, userRepo)
+	var httpHandler http.Handler = authMW(mux)
 	httpHandler = middleware.CORS(cfg.FrontendURL)(httpHandler)
 
 	server := &http.Server{

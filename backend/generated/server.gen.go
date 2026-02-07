@@ -17,6 +17,13 @@ import (
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/oapi-codegen/runtime"
+)
+
+// Defines values for HackathonStatus.
+const (
+	HackathonStatusActive HackathonStatus = "active"
+	HackathonStatusPast   HackathonStatus = "past"
 )
 
 // Defines values for UserRole.
@@ -25,6 +32,12 @@ const (
 	ClubLeader UserRole = "club_leader"
 	Guest      UserRole = "guest"
 	Student    UserRole = "student"
+)
+
+// Defines values for ListHackathonsParamsStatus.
+const (
+	ListHackathonsParamsStatusActive ListHackathonsParamsStatus = "active"
+	ListHackathonsParamsStatusPast   ListHackathonsParamsStatus = "past"
 )
 
 // AuthRequest defines model for AuthRequest.
@@ -43,9 +56,67 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// Hackathon defines model for Hackathon.
+type Hackathon struct {
+	CreatedAt   *time.Time      `json:"created_at,omitempty"`
+	Description string          `json:"description"`
+	EndDate     time.Time       `json:"end_date"`
+	Id          int64           `json:"id"`
+	StartDate   time.Time       `json:"start_date"`
+	Status      HackathonStatus `json:"status"`
+	Title       string          `json:"title"`
+}
+
+// HackathonStatus defines model for Hackathon.Status.
+type HackathonStatus string
+
+// HackathonApplication defines model for HackathonApplication.
+type HackathonApplication struct {
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
+	HackathonId int64      `json:"hackathon_id"`
+	Id          int64      `json:"id"`
+	Status      string     `json:"status"`
+	TeamName    *string    `json:"team_name,omitempty"`
+	User        *User      `json:"user,omitempty"`
+	UserId      int64      `json:"user_id"`
+}
+
+// HackathonApplyRequest defines model for HackathonApplyRequest.
+type HackathonApplyRequest struct {
+	TeamName *string `json:"team_name,omitempty"`
+}
+
+// HackathonCreateRequest defines model for HackathonCreateRequest.
+type HackathonCreateRequest struct {
+	Description string    `json:"description"`
+	EndDate     time.Time `json:"end_date"`
+	StartDate   time.Time `json:"start_date"`
+	Title       string    `json:"title"`
+}
+
 // HealthResponse defines model for HealthResponse.
 type HealthResponse struct {
 	Status string `json:"status"`
+}
+
+// News defines model for News.
+type News struct {
+	AuthorId  *int64     `json:"author_id,omitempty"`
+	Content   string     `json:"content"`
+	CreatedAt time.Time  `json:"created_at"`
+	Id        int64      `json:"id"`
+	ImageUrl  *string    `json:"image_url,omitempty"`
+	Tag       string     `json:"tag"`
+	Title     string     `json:"title"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+// NewsCreateRequest defines model for NewsCreateRequest.
+type NewsCreateRequest struct {
+	Content  string  `json:"content"`
+	ImageUrl *string `json:"image_url,omitempty"`
+	Tag      string  `json:"tag"`
+	Title    string  `json:"title"`
 }
 
 // User defines model for User.
@@ -64,17 +135,78 @@ type User struct {
 // UserRole defines model for User.Role.
 type UserRole string
 
+// ListHackathonsParams defines parameters for ListHackathons.
+type ListHackathonsParams struct {
+	Status *ListHackathonsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListHackathonsParamsStatus defines parameters for ListHackathons.
+type ListHackathonsParamsStatus string
+
+// ListNewsParams defines parameters for ListNews.
+type ListNewsParams struct {
+	Tag *string `form:"tag,omitempty" json:"tag,omitempty"`
+}
+
 // AuthTelegramJSONRequestBody defines body for AuthTelegram for application/json ContentType.
 type AuthTelegramJSONRequestBody = AuthRequest
+
+// CreateHackathonJSONRequestBody defines body for CreateHackathon for application/json ContentType.
+type CreateHackathonJSONRequestBody = HackathonCreateRequest
+
+// ApplyToHackathonJSONRequestBody defines body for ApplyToHackathon for application/json ContentType.
+type ApplyToHackathonJSONRequestBody = HackathonApplyRequest
+
+// CreateNewsJSONRequestBody defines body for CreateNews for application/json ContentType.
+type CreateNewsJSONRequestBody = NewsCreateRequest
+
+// UpdateNewsJSONRequestBody defines body for UpdateNews for application/json ContentType.
+type UpdateNewsJSONRequestBody = NewsCreateRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Authenticate via Telegram initData
 	// (POST /api/auth/telegram)
 	AuthTelegram(w http.ResponseWriter, r *http.Request)
+	// List hackathons
+	// (GET /api/hackathons)
+	ListHackathons(w http.ResponseWriter, r *http.Request, params ListHackathonsParams)
+	// Create a hackathon (admin only)
+	// (POST /api/hackathons)
+	CreateHackathon(w http.ResponseWriter, r *http.Request)
+	// Delete a hackathon (admin only)
+	// (DELETE /api/hackathons/{id})
+	DeleteHackathon(w http.ResponseWriter, r *http.Request, id int64)
+	// Get a single hackathon
+	// (GET /api/hackathons/{id})
+	GetHackathon(w http.ResponseWriter, r *http.Request, id int64)
+	// List applications for a hackathon (admin only)
+	// (GET /api/hackathons/{id}/applications)
+	ListHackathonApplications(w http.ResponseWriter, r *http.Request, id int64)
+	// Apply to a hackathon
+	// (POST /api/hackathons/{id}/apply)
+	ApplyToHackathon(w http.ResponseWriter, r *http.Request, id int64)
 	// Health check endpoint
 	// (GET /api/health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// List news articles
+	// (GET /api/news)
+	ListNews(w http.ResponseWriter, r *http.Request, params ListNewsParams)
+	// Create a news article (admin only)
+	// (POST /api/news)
+	CreateNews(w http.ResponseWriter, r *http.Request)
+	// Delete a news article (admin only)
+	// (DELETE /api/news/{id})
+	DeleteNews(w http.ResponseWriter, r *http.Request, id int64)
+	// Get a single news article
+	// (GET /api/news/{id})
+	GetNews(w http.ResponseWriter, r *http.Request, id int64)
+	// Update a news article (admin only)
+	// (PUT /api/news/{id})
+	UpdateNews(w http.ResponseWriter, r *http.Request, id int64)
+	// Get current authenticated user
+	// (GET /api/users/me)
+	GetMe(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -100,11 +232,282 @@ func (siw *ServerInterfaceWrapper) AuthTelegram(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ListHackathons operation middleware
+func (siw *ServerInterfaceWrapper) ListHackathons(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListHackathonsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "status", r.URL.Query(), &params.Status)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListHackathons(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateHackathon operation middleware
+func (siw *ServerInterfaceWrapper) CreateHackathon(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateHackathon(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteHackathon operation middleware
+func (siw *ServerInterfaceWrapper) DeleteHackathon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteHackathon(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHackathon operation middleware
+func (siw *ServerInterfaceWrapper) GetHackathon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHackathon(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListHackathonApplications operation middleware
+func (siw *ServerInterfaceWrapper) ListHackathonApplications(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListHackathonApplications(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApplyToHackathon operation middleware
+func (siw *ServerInterfaceWrapper) ApplyToHackathon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplyToHackathon(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNews operation middleware
+func (siw *ServerInterfaceWrapper) ListNews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNewsParams
+
+	// ------------- Optional query parameter "tag" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "tag", r.URL.Query(), &params.Tag)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNews(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateNews operation middleware
+func (siw *ServerInterfaceWrapper) CreateNews(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateNews(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteNews operation middleware
+func (siw *ServerInterfaceWrapper) DeleteNews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteNews(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNews operation middleware
+func (siw *ServerInterfaceWrapper) GetNews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNews(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateNews operation middleware
+func (siw *ServerInterfaceWrapper) UpdateNews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateNews(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMe operation middleware
+func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMe(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -235,7 +638,19 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("POST "+options.BaseURL+"/api/auth/telegram", wrapper.AuthTelegram)
+	m.HandleFunc("GET "+options.BaseURL+"/api/hackathons", wrapper.ListHackathons)
+	m.HandleFunc("POST "+options.BaseURL+"/api/hackathons", wrapper.CreateHackathon)
+	m.HandleFunc("DELETE "+options.BaseURL+"/api/hackathons/{id}", wrapper.DeleteHackathon)
+	m.HandleFunc("GET "+options.BaseURL+"/api/hackathons/{id}", wrapper.GetHackathon)
+	m.HandleFunc("GET "+options.BaseURL+"/api/hackathons/{id}/applications", wrapper.ListHackathonApplications)
+	m.HandleFunc("POST "+options.BaseURL+"/api/hackathons/{id}/apply", wrapper.ApplyToHackathon)
 	m.HandleFunc("GET "+options.BaseURL+"/api/health", wrapper.GetHealth)
+	m.HandleFunc("GET "+options.BaseURL+"/api/news", wrapper.ListNews)
+	m.HandleFunc("POST "+options.BaseURL+"/api/news", wrapper.CreateNews)
+	m.HandleFunc("DELETE "+options.BaseURL+"/api/news/{id}", wrapper.DeleteNews)
+	m.HandleFunc("GET "+options.BaseURL+"/api/news/{id}", wrapper.GetNews)
+	m.HandleFunc("PUT "+options.BaseURL+"/api/news/{id}", wrapper.UpdateNews)
+	m.HandleFunc("GET "+options.BaseURL+"/api/users/me", wrapper.GetMe)
 
 	return m
 }
@@ -243,19 +658,31 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/7RVTW/jNhD9K8S0R9VSmrQIdHPaoDXQokE+ToVhMOLYYiKRDDn0xgj83xdDyevIdpws",
-	"kD2ZFDkf7/HN8wtUtnXWoKEA5QuEqsZWpuU4Un2NTxED8dZ569CTxnSojaaZkiR5ozBUXjvS1kAJ1/KL",
-	"uMUGF1624l9ttBg7JzjgT0lSBPLaLCADWjmEEvr9ep2Bx6eoPSoo/39VYPrtqr1/wIpgnfW9BWdNwP3m",
-	"YkDPvz97nEMJP+VbjHkPML/jO7tFU+ChepfeW/92QeRjXhzH1F07lP9vlM0xRIEkxa7Us2xdk6If3yWx",
-	"DztU8a7naFin8igJ1UymJ59b3/IKlCT8hXSL+xUzmGsfaGZkiwcYyECrQSpt6PezbRptCBf8Ehk08lga",
-	"V1uys+ibg6feNikMTWwZ+CKpNoNAUaHhVdXE+1mDUqGHDKRqtXnFyzYT9cqdfbjv6NR3c8ZCewPq7hwo",
-	"GDbVg91/U47UZm73J/JCVo9olBhfTcTcekE1itsb8Ydt22g0rcR/N/sTy2U1JaXt3h1fTSCDJfrQ5S9G",
-	"J6OCYVmHRjoNJZyOitEpZOAk1UlZuXQ6l5HqfAMmqc925jLs9/K5qqVZ4DEbYRxSMI8iYEiNpPpecpKJ",
-	"gjKZxCYDdKxioAurVknq1hBLo3wB6VyjqxSYPwRuYWOE77nIa49cD5+OfMT0oZvpRMKvRfHJpXvDSLWH",
-	"JPI5GuqTixCrCkOYx4Yf6qw4+bRGht54oJOJWcpGq/R2Iln6OoPfPpGKD3RAPG+NCOiX6EVnxHwvxLaV",
-	"fjXkC8VSy634NprjiZCLwFPJQoYpJ0i6rpN9c5sLTFiGQvwLqTN4+IF62PkLOcDCDfqlrlDoILqGVzsU",
-	"dClEVWP1KNAoZ3Xyzg3qHuY05e6o5O+74/uPrWQjFC6xsa5FQz3tkEHyb6iJXJnnDd+rbaDyvDgvYD1d",
-	"fw0AAP//4ptP5o4IAAA=",
+	"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",
+	"vRm+GdLlzfLfAAAA//+8Sei7lyUAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

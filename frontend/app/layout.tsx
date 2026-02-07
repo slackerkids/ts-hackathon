@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TMAProvider } from "./providers";
+import { AuthProvider } from "@/lib/auth";
+import { BottomNav } from "./components/bottom-nav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,44 +38,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <TMAProvider>
-          <main className="min-h-screen pb-20">{children}</main>
-          <BottomNav />
+          <AuthProvider>
+            <main className="min-h-screen pb-20">{children}</main>
+            <BottomNav />
+          </AuthProvider>
         </TMAProvider>
       </body>
     </html>
-  );
-}
-
-function BottomNav() {
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-secondary-bg border-t border-hint/20">
-      <div className="flex justify-around items-center h-16 max-w-md mx-auto">
-        <NavItem label="Home" icon="🏠" active />
-        <NavItem label="Clubs" icon="👥" />
-        <NavItem label="Events" icon="🏆" />
-        <NavItem label="Profile" icon="👤" />
-      </div>
-    </nav>
-  );
-}
-
-function NavItem({
-  label,
-  icon,
-  active = false,
-}: {
-  label: string;
-  icon: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      className={`flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors ${
-        active ? "text-link" : "text-hint"
-      }`}
-    >
-      <span className="text-xl">{icon}</span>
-      <span>{label}</span>
-    </button>
   );
 }

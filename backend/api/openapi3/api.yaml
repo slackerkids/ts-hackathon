@@ -2,7 +2,7 @@ openapi: "3.0.3"
 info:
   title: TS Community OS API
   description: Backend API for the TS Community OS Telegram Mini App
-  version: 0.1.0
+  version: 0.2.0
 
 servers:
   - url: http://localhost:8080
@@ -49,8 +49,318 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error
+
+  /api/users/me:
+    get:
+      operationId: getMe
+      summary: Get current authenticated user
+      tags:
+        - users
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/news:
+    get:
+      operationId: listNews
+      summary: List news articles
+      tags:
+        - news
+      parameters:
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of news
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/News"
+    post:
+      operationId: createNews
+      summary: Create a news article (admin only)
+      tags:
+        - news
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewsCreateRequest"
+      responses:
+        "201":
+          description: News created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/News"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden - admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/news/{id}:
+    get:
+      operationId: getNews
+      summary: Get a single news article
+      tags:
+        - news
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: News article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/News"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateNews
+      summary: Update a news article (admin only)
+      tags:
+        - news
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewsCreateRequest"
+      responses:
+        "200":
+          description: News updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/News"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteNews
+      summary: Delete a news article (admin only)
+      tags:
+        - news
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: News deleted
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/hackathons:
+    get:
+      operationId: listHackathons
+      summary: List hackathons
+      tags:
+        - hackathons
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - past
+      responses:
+        "200":
+          description: List of hackathons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Hackathon"
+    post:
+      operationId: createHackathon
+      summary: Create a hackathon (admin only)
+      tags:
+        - hackathons
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HackathonCreateRequest"
+      responses:
+        "201":
+          description: Hackathon created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hackathon"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/hackathons/{id}:
+    get:
+      operationId: getHackathon
+      summary: Get a single hackathon
+      tags:
+        - hackathons
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Hackathon details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hackathon"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteHackathon
+      summary: Delete a hackathon (admin only)
+      tags:
+        - hackathons
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: Hackathon deleted
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/hackathons/{id}/apply:
+    post:
+      operationId: applyToHackathon
+      summary: Apply to a hackathon
+      tags:
+        - hackathons
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HackathonApplyRequest"
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HackathonApplication"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/hackathons/{id}/applications:
+    get:
+      operationId: listHackathonApplications
+      summary: List applications for a hackathon (admin only)
+      tags:
+        - hackathons
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HackathonApplication"
+        "403":
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -126,3 +436,133 @@ components:
       properties:
         error:
           type: string
+
+    News:
+      type: object
+      required:
+        - id
+        - title
+        - content
+        - tag
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        content:
+          type: string
+        image_url:
+          type: string
+        tag:
+          type: string
+        author_id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    NewsCreateRequest:
+      type: object
+      required:
+        - title
+        - content
+        - tag
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        image_url:
+          type: string
+        tag:
+          type: string
+
+    Hackathon:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - status
+        - start_date
+        - end_date
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - past
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    HackathonCreateRequest:
+      type: object
+      required:
+        - title
+        - description
+        - start_date
+        - end_date
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+
+    HackathonApplyRequest:
+      type: object
+      properties:
+        team_name:
+          type: string
+
+    HackathonApplication:
+      type: object
+      required:
+        - id
+        - hackathon_id
+        - user_id
+        - status
+      properties:
+        id:
+          type: integer
+          format: int64
+        hackathon_id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        team_name:
+          type: string
+        status:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        created_at:
+          type: string
+          format: date-time
