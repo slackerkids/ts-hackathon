@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface News {
   id: number;
@@ -33,55 +37,55 @@ export default function NewsPage() {
     <div className="px-4 pt-6 space-y-4">
       <h1 className="text-xl font-bold">News</h1>
 
-      {/* Tag filters */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {TAGS.map((tag) => (
-          <button
+          <Button
             key={tag}
+            variant={activeTag === tag ? "default" : "outline"}
+            size="sm"
+            className="rounded-full"
             onClick={() => setActiveTag(tag)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-              activeTag === tag
-                ? "bg-button text-button-text"
-                : "bg-secondary-bg text-hint"
-            }`}
           >
             {tag}
-          </button>
+          </Button>
         ))}
       </div>
 
-      {/* News list */}
       <div className="space-y-3">
         {loading ? (
-          <div className="text-center text-hint py-8">Loading...</div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-xl" />
+            ))}
+          </div>
         ) : news.length === 0 ? (
-          <div className="text-center text-hint py-8">No news found.</div>
+          <p className="text-center text-muted-foreground py-8">No news found.</p>
         ) : (
           news.map((item) => (
             <Link key={item.id} href={`/news/${item.id}`}>
-              <article className="bg-secondary-bg rounded-xl p-4 space-y-2 hover:opacity-80 transition-opacity">
-                {item.image_url && (
-                  <div className="w-full h-40 rounded-lg bg-background overflow-hidden">
-                    <img
-                      src={item.image_url}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
+              <Card className="hover:opacity-80 transition-opacity">
+                <CardContent className="pt-4 space-y-2">
+                  {item.image_url && (
+                    <div className="w-full h-40 rounded-lg overflow-hidden">
+                      <img
+                        src={item.image_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">#{item.tag}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </span>
                   </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-link font-medium">
-                    #{item.tag}
-                  </span>
-                  <span className="text-xs text-hint">
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <h2 className="font-semibold">{item.title}</h2>
-                <p className="text-sm text-hint line-clamp-3">
-                  {item.content}
-                </p>
-              </article>
+                  <h2 className="font-semibold">{item.title}</h2>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {item.content}
+                  </p>
+                </CardContent>
+              </Card>
             </Link>
           ))
         )}

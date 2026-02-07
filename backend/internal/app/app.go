@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tomorrow-school/ts-hackathon/backend/generated"
 	"github.com/tomorrow-school/ts-hackathon/backend/internal/config"
+	"github.com/tomorrow-school/ts-hackathon/backend/internal/gateway"
 	"github.com/tomorrow-school/ts-hackathon/backend/internal/handler"
 	"github.com/tomorrow-school/ts-hackathon/backend/internal/middleware"
 	"github.com/tomorrow-school/ts-hackathon/backend/internal/repository"
@@ -28,37 +29,44 @@ type App struct {
 func New(cfg *config.Config) (*App, error) {
 	ctx := context.Background()
 
-	// Initialize pgx connection pool
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pgx pool: %w", err)
 	}
-
-	// Verify database connection
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 	log.Println("Connected to PostgreSQL")
 
-	// Initialize repositories
+	// Gateways
+	schoolGW := gateway.NewSchoolGateway()
+
+	// Repositories
 	userRepo := repository.NewUserRepository(pool)
 	newsRepo := repository.NewNewsRepository(pool)
 	hackathonRepo := repository.NewHackathonRepository(pool)
+	attendanceRepo := repository.NewAttendanceRepository(pool)
+	clubRepo := repository.NewClubRepository(pool)
+	govRepo := repository.NewGovRepository(pool)
 
-	// Initialize services
+	// Services
 	authService := service.NewAuthService(cfg.BotToken, userRepo)
+	schoolService := service.NewSchoolService(schoolGW, userRepo)
 	newsService := service.NewNewsService(newsRepo)
 	hackathonService := service.NewHackathonService(hackathonRepo)
+	attendanceService := service.NewAttendanceService(attendanceRepo)
+	clubService := service.NewClubService(clubRepo)
+	govService := service.NewGovService(govRepo)
 
-	// Initialize handler
-	h := handler.NewHandler(authService, newsService, hackathonService)
+	// Handler
+	h := handler.NewHandler(authService, schoolService, newsService, hackathonService, attendanceService, clubService, govService)
 
-	// Set up router with generated routes
+	// Router
 	mux := http.NewServeMux()
 	generated.HandlerFromMux(h, mux)
 
-	// Apply middleware chain: auth -> CORS -> mux
+	// Middleware
 	authMW := middleware.Auth(cfg.BotToken, userRepo)
 	var httpHandler http.Handler = authMW(mux)
 	httpHandler = middleware.CORS(cfg.FrontendURL)(httpHandler)
@@ -71,15 +79,10 @@ func New(cfg *config.Config) (*App, error) {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	return &App{
-		cfg:    cfg,
-		pool:   pool,
-		server: server,
-	}, nil
+	return &App{cfg: cfg, pool: pool, server: server}, nil
 }
 
 func (a *App) Run() error {
-	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 

@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useUser } from "@/lib/auth";
 import { api } from "@/lib/api";
+import { useUser } from "@/lib/auth";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, Calendar, Send } from "lucide-react";
 
 interface Hackathon {
   id: number;
@@ -20,34 +26,29 @@ export default function HackathonDetailPage() {
   const { user } = useUser();
   const [hackathon, setHackathon] = useState<Hackathon | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [teamName, setTeamName] = useState("");
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
-  const [teamName, setTeamName] = useState("");
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   useEffect(() => {
     api<Hackathon>(`/api/hackathons/${params.id}`)
       .then(setHackathon)
-      .catch((err) => setError(err.message))
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, [params.id]);
 
   const handleApply = async () => {
-    if (!user) return;
     setApplying(true);
+    setApplyError(null);
     try {
       await api(`/api/hackathons/${params.id}/apply`, {
         method: "POST",
-        body: JSON.stringify({ team_name: teamName }),
+        body: JSON.stringify({ team_name: teamName || undefined }),
       });
       setApplied(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to apply";
-      if (message.includes("already applied")) {
-        setApplied(true);
-      } else {
-        setError(message);
-      }
+      setApplyError(err instanceof Error ? err.message : "Failed to apply");
     } finally {
       setApplying(false);
     }
@@ -55,87 +56,78 @@ export default function HackathonDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-hint">Loading...</p>
+      <div className="px-4 pt-6 space-y-4">
+        <Skeleton className="h-6 w-20" />
+        <Skeleton className="h-8 w-3/4" />
+        <Skeleton className="h-40 w-full rounded-xl" />
       </div>
     );
   }
 
-  if (error || !hackathon) {
+  if (!hackathon) {
     return (
       <div className="px-4 pt-6 space-y-4">
-        <button onClick={() => router.back()} className="text-link text-sm">
-          &larr; Back
-        </button>
-        <p className="text-hint">{error || "Hackathon not found."}</p>
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+        </Button>
+        <p className="text-muted-foreground">Hackathon not found.</p>
       </div>
     );
   }
 
   return (
     <div className="px-4 pt-6 space-y-4">
-      <button onClick={() => router.back()} className="text-link text-sm">
-        &larr; Back
-      </button>
-
-      <div className="flex items-center gap-2">
-        <span
-          className={`text-xs font-medium uppercase px-2 py-0.5 rounded-full ${
-            hackathon.status === "active"
-              ? "bg-green-500/20 text-green-600"
-              : "bg-hint/20 text-hint"
-          }`}
-        >
-          {hackathon.status}
-        </span>
-      </div>
+      <Button variant="ghost" size="sm" onClick={() => router.back()}>
+        <ArrowLeft className="h-4 w-4 mr-1" /> Back
+      </Button>
 
       <h1 className="text-2xl font-bold">{hackathon.title}</h1>
 
-      <div className="flex gap-4 text-sm text-hint">
-        <div>
-          <p className="text-xs">Start</p>
-          <p className="font-medium text-foreground">
-            {new Date(hackathon.start_date).toLocaleDateString()}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs">End</p>
-          <p className="font-medium text-foreground">
-            {new Date(hackathon.end_date).toLocaleDateString()}
-          </p>
+      <div className="flex items-center gap-2">
+        <Badge variant={hackathon.status === "active" ? "default" : "secondary"} className="uppercase">
+          {hackathon.status}
+        </Badge>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Calendar className="h-3 w-3" />
+          {new Date(hackathon.start_date).toLocaleDateString()} - {new Date(hackathon.end_date).toLocaleDateString()}
         </div>
       </div>
 
-      <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed">
-        {hackathon.description}
-      </div>
+      <Card>
+        <CardContent className="pt-4">
+          <div className="whitespace-pre-wrap text-sm leading-relaxed">
+            {hackathon.description}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Apply section */}
-      {hackathon.status === "active" && user && !applied && (
-        <div className="bg-secondary-bg rounded-xl p-4 space-y-3">
-          <h3 className="font-semibold">Apply to this hackathon</h3>
-          <input
-            type="text"
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-            placeholder="Team name (optional)"
-            className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm outline-none border border-hint/20 focus:border-link"
-          />
-          <button
-            onClick={handleApply}
-            disabled={applying}
-            className="w-full py-2.5 rounded-lg bg-button text-button-text font-medium text-sm disabled:opacity-50"
-          >
-            {applying ? "Applying..." : "Submit Application"}
-          </button>
-        </div>
+      {user && hackathon.status === "active" && !applied && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <h3 className="font-semibold">Apply to this hackathon</h3>
+            <Input
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder="Team name (optional)"
+            />
+            {applyError && (
+              <p className="text-destructive text-sm">{applyError}</p>
+            )}
+            <Button onClick={handleApply} disabled={applying} className="w-full">
+              <Send className="h-4 w-4 mr-2" />
+              {applying ? "Applying..." : "Submit Application"}
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {applied && (
-        <div className="bg-green-500/10 text-green-600 rounded-xl p-4 text-sm font-medium text-center">
-          Application submitted successfully!
-        </div>
+        <Card>
+          <CardContent className="pt-4 text-center">
+            <p className="text-green-600 font-medium">Application submitted successfully!</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

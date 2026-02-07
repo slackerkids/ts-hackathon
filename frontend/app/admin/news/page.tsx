@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, Trash2 } from "lucide-react";
 
 interface News {
   id: number;
@@ -15,15 +20,12 @@ export default function AdminNewsPage() {
   const [news, setNews] = useState<News[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchNews = () => {
-    setLoading(true);
+  useEffect(() => {
     api<News[]>("/api/news")
       .then(setNews)
       .catch(console.error)
       .finally(() => setLoading(false));
-  };
-
-  useEffect(fetchNews, []);
+  }, []);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this news article?")) return;
@@ -39,43 +41,45 @@ export default function AdminNewsPage() {
     <div className="px-4 pt-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">News CMS</h1>
-        <Link
-          href="/admin/news/create"
-          className="px-3 py-1.5 rounded-lg bg-button text-button-text text-sm font-medium"
-        >
-          + Create
-        </Link>
+        <Button asChild size="sm">
+          <Link href="/admin/news/create">
+            <Plus className="h-4 w-4 mr-1" /> Create
+          </Link>
+        </Button>
       </div>
 
       <div className="space-y-2">
         {loading ? (
-          <div className="text-center text-hint py-8">Loading...</div>
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
         ) : news.length === 0 ? (
-          <div className="text-center text-hint py-8">No news yet.</div>
+          <p className="text-center text-muted-foreground py-8">No news yet.</p>
         ) : (
           news.map((item) => (
-            <div
-              key={item.id}
-              className="bg-secondary-bg rounded-xl p-4 flex items-center justify-between"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-link font-medium">
-                    #{item.tag}
-                  </span>
-                  <span className="text-xs text-hint">
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </span>
+            <Card key={item.id}>
+              <CardContent className="pt-4 flex items-center justify-between">
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">#{item.tag}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <h3 className="font-medium text-sm truncate">{item.title}</h3>
                 </div>
-                <h3 className="font-medium text-sm truncate">{item.title}</h3>
-              </div>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="ml-2 px-2 py-1 text-xs text-red-500 hover:bg-red-500/10 rounded"
-              >
-                Delete
-              </button>
-            </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDelete(item.id)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </CardContent>
+            </Card>
           ))
         )}
       </div>

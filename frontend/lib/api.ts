@@ -1,7 +1,5 @@
 import { retrieveRawInitData } from "@tma.js/sdk-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
 type RequestOptions = Omit<RequestInit, "headers"> & {
   headers?: Record<string, string>;
 };
@@ -25,13 +23,15 @@ export async function api<T>(
     // Not inside Telegram or SDK not initialized -- skip auth header
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(endpoint, {
     ...options,
     headers,
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    const error = await response
+      .json()
+      .catch(() => ({ error: "Unknown error" }));
     throw new Error(error.error || `HTTP ${response.status}`);
   }
 

@@ -40,9 +40,17 @@ const (
 	ListHackathonsParamsStatusPast   ListHackathonsParamsStatus = "past"
 )
 
+// Attendance defines model for Attendance.
+type Attendance struct {
+	CoinsAwarded int        `json:"coins_awarded"`
+	CreatedAt    *time.Time `json:"created_at,omitempty"`
+	EventName    string     `json:"event_name"`
+	Id           int64      `json:"id"`
+	UserId       int64      `json:"user_id"`
+}
+
 // AuthRequest defines model for AuthRequest.
 type AuthRequest struct {
-	// InitData Raw Telegram Mini App initData string
 	InitData string `json:"init_data"`
 }
 
@@ -51,9 +59,56 @@ type AuthResponse struct {
 	User User `json:"user"`
 }
 
+// CheckInRequest defines model for CheckInRequest.
+type CheckInRequest struct {
+	Coins     int    `json:"coins"`
+	EventName string `json:"event_name"`
+	UserId    int64  `json:"user_id"`
+}
+
+// Club defines model for Club.
+type Club struct {
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	Id          int64      `json:"id"`
+	ImageUrl    *string    `json:"image_url,omitempty"`
+	IsMember    *bool      `json:"is_member,omitempty"`
+	MemberCount *int       `json:"member_count,omitempty"`
+	Name        string     `json:"name"`
+	Schedule    *string    `json:"schedule,omitempty"`
+}
+
+// ClubCreateRequest defines model for ClubCreateRequest.
+type ClubCreateRequest struct {
+	Description *string `json:"description,omitempty"`
+	ImageUrl    *string `json:"image_url,omitempty"`
+	Name        string  `json:"name"`
+	Schedule    *string `json:"schedule,omitempty"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Error string `json:"error"`
+}
+
+// GovMember defines model for GovMember.
+type GovMember struct {
+	ContactUrl   *string    `json:"contact_url,omitempty"`
+	CreatedAt    *time.Time `json:"created_at,omitempty"`
+	DisplayOrder *int       `json:"display_order,omitempty"`
+	Id           int64      `json:"id"`
+	Name         string     `json:"name"`
+	PhotoUrl     *string    `json:"photo_url,omitempty"`
+	RoleTitle    string     `json:"role_title"`
+}
+
+// GovMemberCreateRequest defines model for GovMemberCreateRequest.
+type GovMemberCreateRequest struct {
+	ContactUrl   *string `json:"contact_url,omitempty"`
+	DisplayOrder *int    `json:"display_order,omitempty"`
+	Name         string  `json:"name"`
+	PhotoUrl     *string `json:"photo_url,omitempty"`
+	RoleTitle    string  `json:"role_title"`
 }
 
 // Hackathon defines model for Hackathon.
@@ -119,17 +174,28 @@ type NewsCreateRequest struct {
 	Title    string  `json:"title"`
 }
 
+// SchoolAuthRequest defines model for SchoolAuthRequest.
+type SchoolAuthRequest struct {
+	Password string `json:"password"`
+	Username string `json:"username"`
+}
+
 // User defines model for User.
 type User struct {
-	CreatedAt  *time.Time `json:"created_at,omitempty"`
-	FirstName  *string    `json:"first_name,omitempty"`
-	Id         int64      `json:"id"`
-	LastName   *string    `json:"last_name,omitempty"`
-	PhotoUrl   *string    `json:"photo_url,omitempty"`
-	Role       UserRole   `json:"role"`
-	TelegramId int64      `json:"telegram_id"`
-	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
-	Username   *string    `json:"username,omitempty"`
+	AuditRatio  *float32   `json:"audit_ratio,omitempty"`
+	Coins       *int       `json:"coins,omitempty"`
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
+	FirstName   *string    `json:"first_name,omitempty"`
+	Id          int64      `json:"id"`
+	LastName    *string    `json:"last_name,omitempty"`
+	PhotoUrl    *string    `json:"photo_url,omitempty"`
+	Role        UserRole   `json:"role"`
+	SchoolLevel *int       `json:"school_level,omitempty"`
+	SchoolLogin *string    `json:"school_login,omitempty"`
+	SchoolXp    *int64     `json:"school_xp,omitempty"`
+	TelegramId  int64      `json:"telegram_id"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+	Username    *string    `json:"username,omitempty"`
 }
 
 // UserRole defines model for User.Role.
@@ -148,8 +214,20 @@ type ListNewsParams struct {
 	Tag *string `form:"tag,omitempty" json:"tag,omitempty"`
 }
 
+// AttendanceCheckInJSONRequestBody defines body for AttendanceCheckIn for application/json ContentType.
+type AttendanceCheckInJSONRequestBody = CheckInRequest
+
+// AuthSchoolJSONRequestBody defines body for AuthSchool for application/json ContentType.
+type AuthSchoolJSONRequestBody = SchoolAuthRequest
+
 // AuthTelegramJSONRequestBody defines body for AuthTelegram for application/json ContentType.
 type AuthTelegramJSONRequestBody = AuthRequest
+
+// CreateClubJSONRequestBody defines body for CreateClub for application/json ContentType.
+type CreateClubJSONRequestBody = ClubCreateRequest
+
+// CreateGovMemberJSONRequestBody defines body for CreateGovMember for application/json ContentType.
+type CreateGovMemberJSONRequestBody = GovMemberCreateRequest
 
 // CreateHackathonJSONRequestBody defines body for CreateHackathon for application/json ContentType.
 type CreateHackathonJSONRequestBody = HackathonCreateRequest
@@ -165,9 +243,45 @@ type UpdateNewsJSONRequestBody = NewsCreateRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Check in a student via QR (admin only)
+	// (POST /api/attendance/check-in)
+	AttendanceCheckIn(w http.ResponseWriter, r *http.Request)
+	// Get current user attendance history
+	// (GET /api/attendance/history)
+	AttendanceHistory(w http.ResponseWriter, r *http.Request)
+	// Verify student via school credentials
+	// (POST /api/auth/school)
+	AuthSchool(w http.ResponseWriter, r *http.Request)
 	// Authenticate via Telegram initData
 	// (POST /api/auth/telegram)
 	AuthTelegram(w http.ResponseWriter, r *http.Request)
+	// List all clubs
+	// (GET /api/clubs)
+	ListClubs(w http.ResponseWriter, r *http.Request)
+	// Create a club (admin only)
+	// (POST /api/clubs)
+	CreateClub(w http.ResponseWriter, r *http.Request)
+	// Delete a club (admin only)
+	// (DELETE /api/clubs/{id})
+	DeleteClub(w http.ResponseWriter, r *http.Request, id int64)
+	// Get a single club
+	// (GET /api/clubs/{id})
+	GetClub(w http.ResponseWriter, r *http.Request, id int64)
+	// Join a club
+	// (POST /api/clubs/{id}/join)
+	JoinClub(w http.ResponseWriter, r *http.Request, id int64)
+	// Leave a club
+	// (DELETE /api/clubs/{id}/leave)
+	LeaveClub(w http.ResponseWriter, r *http.Request, id int64)
+	// List government members
+	// (GET /api/gov)
+	ListGovMembers(w http.ResponseWriter, r *http.Request)
+	// Add a government member (admin only)
+	// (POST /api/gov)
+	CreateGovMember(w http.ResponseWriter, r *http.Request)
+	// Remove a government member (admin only)
+	// (DELETE /api/gov/{id})
+	DeleteGovMember(w http.ResponseWriter, r *http.Request, id int64)
 	// List hackathons
 	// (GET /api/hackathons)
 	ListHackathons(w http.ResponseWriter, r *http.Request, params ListHackathonsParams)
@@ -218,11 +332,234 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// AttendanceCheckIn operation middleware
+func (siw *ServerInterfaceWrapper) AttendanceCheckIn(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AttendanceCheckIn(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AttendanceHistory operation middleware
+func (siw *ServerInterfaceWrapper) AttendanceHistory(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AttendanceHistory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AuthSchool operation middleware
+func (siw *ServerInterfaceWrapper) AuthSchool(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AuthSchool(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AuthTelegram operation middleware
 func (siw *ServerInterfaceWrapper) AuthTelegram(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AuthTelegram(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListClubs operation middleware
+func (siw *ServerInterfaceWrapper) ListClubs(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListClubs(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateClub operation middleware
+func (siw *ServerInterfaceWrapper) CreateClub(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateClub(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteClub operation middleware
+func (siw *ServerInterfaceWrapper) DeleteClub(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteClub(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetClub operation middleware
+func (siw *ServerInterfaceWrapper) GetClub(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetClub(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// JoinClub operation middleware
+func (siw *ServerInterfaceWrapper) JoinClub(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.JoinClub(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LeaveClub operation middleware
+func (siw *ServerInterfaceWrapper) LeaveClub(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LeaveClub(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListGovMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListGovMembers(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListGovMembers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateGovMember operation middleware
+func (siw *ServerInterfaceWrapper) CreateGovMember(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateGovMember(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteGovMember operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGovMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGovMember(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -637,7 +974,19 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc("POST "+options.BaseURL+"/api/attendance/check-in", wrapper.AttendanceCheckIn)
+	m.HandleFunc("GET "+options.BaseURL+"/api/attendance/history", wrapper.AttendanceHistory)
+	m.HandleFunc("POST "+options.BaseURL+"/api/auth/school", wrapper.AuthSchool)
 	m.HandleFunc("POST "+options.BaseURL+"/api/auth/telegram", wrapper.AuthTelegram)
+	m.HandleFunc("GET "+options.BaseURL+"/api/clubs", wrapper.ListClubs)
+	m.HandleFunc("POST "+options.BaseURL+"/api/clubs", wrapper.CreateClub)
+	m.HandleFunc("DELETE "+options.BaseURL+"/api/clubs/{id}", wrapper.DeleteClub)
+	m.HandleFunc("GET "+options.BaseURL+"/api/clubs/{id}", wrapper.GetClub)
+	m.HandleFunc("POST "+options.BaseURL+"/api/clubs/{id}/join", wrapper.JoinClub)
+	m.HandleFunc("DELETE "+options.BaseURL+"/api/clubs/{id}/leave", wrapper.LeaveClub)
+	m.HandleFunc("GET "+options.BaseURL+"/api/gov", wrapper.ListGovMembers)
+	m.HandleFunc("POST "+options.BaseURL+"/api/gov", wrapper.CreateGovMember)
+	m.HandleFunc("DELETE "+options.BaseURL+"/api/gov/{id}", wrapper.DeleteGovMember)
 	m.HandleFunc("GET "+options.BaseURL+"/api/hackathons", wrapper.ListHackathons)
 	m.HandleFunc("POST "+options.BaseURL+"/api/hackathons", wrapper.CreateHackathon)
 	m.HandleFunc("DELETE "+options.BaseURL+"/api/hackathons/{id}", wrapper.DeleteHackathon)
@@ -658,31 +1007,41 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"vRm+GdLlzfLfAAAA//+8Sei7lyUAAA==",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

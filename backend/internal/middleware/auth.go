@@ -34,6 +34,8 @@ var publicRoutes = map[string]bool{
 var publicGETPrefixes = []string{
 	"/api/news",
 	"/api/hackathons",
+	"/api/clubs",
+	"/api/gov",
 }
 
 func isPublic(method, path string) bool {

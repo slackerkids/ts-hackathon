@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Hackathon {
   id: number;
@@ -30,62 +34,57 @@ export default function HackathonsPage() {
     <div className="px-4 pt-6 space-y-4">
       <h1 className="text-xl font-bold">Hackathons</h1>
 
-      {/* Tabs */}
       <div className="flex gap-2">
-        <button
+        <Button
+          variant={tab === "active" ? "default" : "outline"}
+          size="sm"
+          className="rounded-full"
           onClick={() => setTab("active")}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            tab === "active"
-              ? "bg-button text-button-text"
-              : "bg-secondary-bg text-hint"
-          }`}
         >
           Active
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={tab === "past" ? "default" : "outline"}
+          size="sm"
+          className="rounded-full"
           onClick={() => setTab("past")}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            tab === "past"
-              ? "bg-button text-button-text"
-              : "bg-secondary-bg text-hint"
-          }`}
         >
           Past
-        </button>
+        </Button>
       </div>
 
-      {/* Hackathon cards */}
       <div className="space-y-3">
         {loading ? (
-          <div className="text-center text-hint py-8">Loading...</div>
-        ) : hackathons.length === 0 ? (
-          <div className="text-center text-hint py-8">
-            No {tab} hackathons.
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+            ))}
           </div>
+        ) : hackathons.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            No {tab} hackathons.
+          </p>
         ) : (
           hackathons.map((h) => (
             <Link key={h.id} href={`/hackathons/${h.id}`}>
-              <article className="bg-secondary-bg rounded-xl p-4 space-y-2 hover:opacity-80 transition-opacity">
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-xs font-medium uppercase px-2 py-0.5 rounded-full ${
-                      h.status === "active"
-                        ? "bg-green-500/20 text-green-600"
-                        : "bg-hint/20 text-hint"
-                    }`}
+              <Card className="hover:opacity-80 transition-opacity">
+                <CardContent className="pt-4 space-y-2">
+                  <Badge
+                    variant={h.status === "active" ? "default" : "secondary"}
+                    className="uppercase text-xs"
                   >
                     {h.status}
-                  </span>
-                </div>
-                <h2 className="font-semibold">{h.title}</h2>
-                <p className="text-sm text-hint line-clamp-2">
-                  {h.description}
-                </p>
-                <p className="text-xs text-hint">
-                  {new Date(h.start_date).toLocaleDateString()} -{" "}
-                  {new Date(h.end_date).toLocaleDateString()}
-                </p>
-              </article>
+                  </Badge>
+                  <h2 className="font-semibold">{h.title}</h2>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {h.description}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(h.start_date).toLocaleDateString()} -{" "}
+                    {new Date(h.end_date).toLocaleDateString()}
+                  </p>
+                </CardContent>
+              </Card>
             </Link>
           ))
         )}

@@ -3,6 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/auth";
 import { type PropsWithChildren } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ShieldAlert } from "lucide-react";
 
 export default function AdminLayout({ children }: PropsWithChildren) {
   const { user, loading } = useUser();
@@ -10,8 +14,9 @@ export default function AdminLayout({ children }: PropsWithChildren) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-hint">Loading...</p>
+      <div className="px-4 pt-6 space-y-4">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-48 w-full rounded-xl" />
       </div>
     );
   }
@@ -19,19 +24,16 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   if (!user || user.role !== "admin") {
     return (
       <div className="px-4 pt-6">
-        <div className="bg-secondary-bg rounded-2xl p-6 text-center space-y-3">
-          <p className="text-4xl">🔒</p>
-          <h2 className="text-lg font-semibold">Access Denied</h2>
-          <p className="text-sm text-hint">
-            This area is restricted to administrators.
-          </p>
-          <button
-            onClick={() => router.push("/")}
-            className="px-4 py-2 rounded-lg bg-button text-button-text text-sm font-medium"
-          >
-            Go Home
-          </button>
-        </div>
+        <Card>
+          <CardContent className="pt-6 text-center space-y-3">
+            <ShieldAlert className="h-12 w-12 mx-auto text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Access Denied</h2>
+            <p className="text-sm text-muted-foreground">
+              This area is restricted to administrators.
+            </p>
+            <Button onClick={() => router.push("/")}>Go Home</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

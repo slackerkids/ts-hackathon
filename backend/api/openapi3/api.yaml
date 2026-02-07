@@ -2,7 +2,7 @@ openapi: "3.0.3"
 info:
   title: TS Community OS API
   description: Backend API for the TS Community OS Telegram Mini App
-  version: 0.2.0
+  version: 0.3.0
 
 servers:
   - url: http://localhost:8080
@@ -13,8 +13,7 @@ paths:
     get:
       operationId: getHealth
       summary: Health check endpoint
-      tags:
-        - health
+      tags: [health]
       responses:
         "200":
           description: Service is healthy
@@ -27,9 +26,7 @@ paths:
     post:
       operationId: authTelegram
       summary: Authenticate via Telegram initData
-      description: Exchange Telegram Mini App initData for a user session
-      tags:
-        - auth
+      tags: [auth]
       requestBody:
         required: true
         content:
@@ -50,12 +47,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/auth/school:
+    post:
+      operationId: authSchool
+      summary: Verify student via school credentials
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchoolAuthRequest"
+      responses:
+        "200":
+          description: School verification successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Invalid school credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/users/me:
     get:
       operationId: getMe
       summary: Get current authenticated user
-      tags:
-        - users
+      tags: [users]
       responses:
         "200":
           description: Current user
@@ -70,12 +91,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── News ────────────────────────────────────────────────
   /api/news:
     get:
       operationId: listNews
       summary: List news articles
-      tags:
-        - news
+      tags: [news]
       parameters:
         - name: tag
           in: query
@@ -94,8 +115,7 @@ paths:
     post:
       operationId: createNews
       summary: Create a news article (admin only)
-      tags:
-        - news
+      tags: [news]
       requestBody:
         required: true
         content:
@@ -109,14 +129,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/News"
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Forbidden - admin only
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -126,8 +140,7 @@ paths:
     get:
       operationId: getNews
       summary: Get a single news article
-      tags:
-        - news
+      tags: [news]
       parameters:
         - name: id
           in: path
@@ -151,8 +164,7 @@ paths:
     put:
       operationId: updateNews
       summary: Update a news article (admin only)
-      tags:
-        - news
+      tags: [news]
       parameters:
         - name: id
           in: path
@@ -182,8 +194,7 @@ paths:
     delete:
       operationId: deleteNews
       summary: Delete a news article (admin only)
-      tags:
-        - news
+      tags: [news]
       parameters:
         - name: id
           in: path
@@ -201,21 +212,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Hackathons ──────────────────────────────────────────
   /api/hackathons:
     get:
       operationId: listHackathons
       summary: List hackathons
-      tags:
-        - hackathons
+      tags: [hackathons]
       parameters:
         - name: status
           in: query
           required: false
           schema:
             type: string
-            enum:
-              - active
-              - past
+            enum: [active, past]
       responses:
         "200":
           description: List of hackathons
@@ -228,8 +237,7 @@ paths:
     post:
       operationId: createHackathon
       summary: Create a hackathon (admin only)
-      tags:
-        - hackathons
+      tags: [hackathons]
       requestBody:
         required: true
         content:
@@ -254,8 +262,7 @@ paths:
     get:
       operationId: getHackathon
       summary: Get a single hackathon
-      tags:
-        - hackathons
+      tags: [hackathons]
       parameters:
         - name: id
           in: path
@@ -279,8 +286,7 @@ paths:
     delete:
       operationId: deleteHackathon
       summary: Delete a hackathon (admin only)
-      tags:
-        - hackathons
+      tags: [hackathons]
       parameters:
         - name: id
           in: path
@@ -302,8 +308,7 @@ paths:
     post:
       operationId: applyToHackathon
       summary: Apply to a hackathon
-      tags:
-        - hackathons
+      tags: [hackathons]
       parameters:
         - name: id
           in: path
@@ -324,12 +329,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HackathonApplication"
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: Already applied
           content:
@@ -341,8 +340,7 @@ paths:
     get:
       operationId: listHackathonApplications
       summary: List applications for a hackathon (admin only)
-      tags:
-        - hackathons
+      tags: [hackathons]
       parameters:
         - name: id
           in: path
@@ -366,12 +364,246 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Attendance ──────────────────────────────────────────
+  /api/attendance/check-in:
+    post:
+      operationId: attendanceCheckIn
+      summary: Check in a student via QR (admin only)
+      tags: [attendance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInRequest"
+      responses:
+        "201":
+          description: Check-in recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attendance"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already checked in today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/attendance/history:
+    get:
+      operationId: attendanceHistory
+      summary: Get current user attendance history
+      tags: [attendance]
+      responses:
+        "200":
+          description: Attendance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Attendance"
+
+  # ── Clubs ───────────────────────────────────────────────
+  /api/clubs:
+    get:
+      operationId: listClubs
+      summary: List all clubs
+      tags: [clubs]
+      responses:
+        "200":
+          description: List of clubs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Club"
+    post:
+      operationId: createClub
+      summary: Create a club (admin only)
+      tags: [clubs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClubCreateRequest"
+      responses:
+        "201":
+          description: Club created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/clubs/{id}:
+    get:
+      operationId: getClub
+      summary: Get a single club
+      tags: [clubs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Club details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteClub
+      summary: Delete a club (admin only)
+      tags: [clubs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: Club deleted
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/clubs/{id}/join:
+    post:
+      operationId: joinClub
+      summary: Join a club
+      tags: [clubs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "409":
+          description: Already a member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/clubs/{id}/leave:
+    delete:
+      operationId: leaveClub
+      summary: Leave a club
+      tags: [clubs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: Left the club
+
+  # ── Student Government ──────────────────────────────────
+  /api/gov:
+    get:
+      operationId: listGovMembers
+      summary: List government members
+      tags: [gov]
+      responses:
+        "200":
+          description: Government members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GovMember"
+    post:
+      operationId: createGovMember
+      summary: Add a government member (admin only)
+      tags: [gov]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GovMemberCreateRequest"
+      responses:
+        "201":
+          description: Member added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GovMember"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/gov/{id}:
+    delete:
+      operationId: deleteGovMember
+      summary: Remove a government member (admin only)
+      tags: [gov]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: Member removed
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthResponse:
       type: object
-      required:
-        - status
+      required: [status]
       properties:
         status:
           type: string
@@ -379,27 +611,30 @@ components:
 
     AuthRequest:
       type: object
-      required:
-        - init_data
+      required: [init_data]
       properties:
         init_data:
           type: string
-          description: Raw Telegram Mini App initData string
 
     AuthResponse:
       type: object
-      required:
-        - user
+      required: [user]
       properties:
         user:
           $ref: "#/components/schemas/User"
 
+    SchoolAuthRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
     User:
       type: object
-      required:
-        - id
-        - telegram_id
-        - role
+      required: [id, telegram_id, role]
       properties:
         id:
           type: integer
@@ -417,11 +652,19 @@ components:
           type: string
         role:
           type: string
-          enum:
-            - guest
-            - student
-            - club_leader
-            - admin
+          enum: [guest, student, club_leader, admin]
+        school_login:
+          type: string
+        school_level:
+          type: integer
+        school_xp:
+          type: integer
+          format: int64
+        audit_ratio:
+          type: number
+          format: float
+        coins:
+          type: integer
         created_at:
           type: string
           format: date-time
@@ -431,20 +674,14 @@ components:
 
     ErrorResponse:
       type: object
-      required:
-        - error
+      required: [error]
       properties:
         error:
           type: string
 
     News:
       type: object
-      required:
-        - id
-        - title
-        - content
-        - tag
-        - created_at
+      required: [id, title, content, tag, created_at]
       properties:
         id:
           type: integer
@@ -469,10 +706,7 @@ components:
 
     NewsCreateRequest:
       type: object
-      required:
-        - title
-        - content
-        - tag
+      required: [title, content, tag]
       properties:
         title:
           type: string
@@ -485,13 +719,7 @@ components:
 
     Hackathon:
       type: object
-      required:
-        - id
-        - title
-        - description
-        - status
-        - start_date
-        - end_date
+      required: [id, title, description, status, start_date, end_date]
       properties:
         id:
           type: integer
@@ -502,9 +730,7 @@ components:
           type: string
         status:
           type: string
-          enum:
-            - active
-            - past
+          enum: [active, past]
         start_date:
           type: string
           format: date-time
@@ -517,11 +743,7 @@ components:
 
     HackathonCreateRequest:
       type: object
-      required:
-        - title
-        - description
-        - start_date
-        - end_date
+      required: [title, description, start_date, end_date]
       properties:
         title:
           type: string
@@ -542,11 +764,7 @@ components:
 
     HackathonApplication:
       type: object
-      required:
-        - id
-        - hackathon_id
-        - user_id
-        - status
+      required: [id, hackathon_id, user_id, status]
       properties:
         id:
           type: integer
@@ -566,3 +784,105 @@ components:
         created_at:
           type: string
           format: date-time
+
+    CheckInRequest:
+      type: object
+      required: [user_id, event_name, coins]
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        event_name:
+          type: string
+        coins:
+          type: integer
+
+    Attendance:
+      type: object
+      required: [id, user_id, event_name, coins_awarded]
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        event_name:
+          type: string
+        coins_awarded:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Club:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        schedule:
+          type: string
+        member_count:
+          type: integer
+        is_member:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    ClubCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        schedule:
+          type: string
+
+    GovMember:
+      type: object
+      required: [id, name, role_title]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        role_title:
+          type: string
+        photo_url:
+          type: string
+        contact_url:
+          type: string
+        display_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    GovMemberCreateRequest:
+      type: object
+      required: [name, role_title]
+      properties:
+        name:
+          type: string
+        role_title:
+          type: string
+        photo_url:
+          type: string
+        contact_url:
+          type: string
+        display_order:
+          type: integer

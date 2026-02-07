@@ -45,7 +45,7 @@ func (s *AuthService) AuthenticateWithInitData(ctx context.Context, rawInitData 
 		FirstName:  parsed.User.FirstName,
 		LastName:   parsed.User.LastName,
 		PhotoURL:   parsed.User.PhotoURL,
-		Role:       model.RoleStudent, // default role for new users
+		Role:       model.RoleGuest, // default role for new users; verified via school
 	}
 
 	// Check if user already exists to preserve their role
