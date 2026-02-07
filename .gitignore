@@ -26,7 +26,21 @@ go.work.sum
 
 # env file
 .env
+.env.local
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+
+# OS files
+.DS_Store
+Thumbs.db

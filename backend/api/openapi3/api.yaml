@@ -1,0 +1,128 @@
+openapi: "3.0.3"
+info:
+  title: TS Community OS API
+  description: Backend API for the TS Community OS Telegram Mini App
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/health:
+    get:
+      operationId: getHealth
+      summary: Health check endpoint
+      tags:
+        - health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/auth/telegram:
+    post:
+      operationId: authTelegram
+      summary: Authenticate via Telegram initData
+      description: Exchange Telegram Mini App initData for a user session
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRequest"
+      responses:
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid init data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+
+    AuthRequest:
+      type: object
+      required:
+        - init_data
+      properties:
+        init_data:
+          type: string
+          description: Raw Telegram Mini App initData string
+
+    AuthResponse:
+      type: object
+      required:
+        - user
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      required:
+        - id
+        - telegram_id
+        - role
+      properties:
+        id:
+          type: integer
+          format: int64
+        telegram_id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        photo_url:
+          type: string
+        role:
+          type: string
+          enum:
+            - guest
+            - student
+            - club_leader
+            - admin
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
