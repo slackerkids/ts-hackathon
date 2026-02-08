@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TMAProvider } from "./providers";
+import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
 import { BottomNav } from "./components/bottom-nav";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
 });
 
@@ -35,13 +36,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${outfit.variable} ${geistMono.variable} antialiased`}
       >
         <TMAProvider>
-          <AuthProvider>
-            <main className="min-h-screen pb-20">{children}</main>
-            <BottomNav />
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <main className="min-h-screen pb-20">{children}</main>
+              <BottomNav />
+            </AuthProvider>
+          </ThemeProvider>
         </TMAProvider>
       </body>
     </html>

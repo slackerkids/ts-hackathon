@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, type PropsWithChildren } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import { useUser } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldAlert, Lock, User as UserIcon } from "lucide-react";
+import { ShieldAlert, Lock, ArrowLeft, Home } from "lucide-react";
 
 export default function AdminLayout({ children }: PropsWithChildren) {
   const { user, loading, refreshUser } = useUser();
@@ -110,5 +111,29 @@ export default function AdminLayout({ children }: PropsWithChildren) {
     );
   }
 
-  return <>{children}</>;
+  const pathname = usePathname();
+  const isAdminHome = pathname === "/admin";
+
+  return (
+    <>
+      <header className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
+        <div className="flex items-center gap-2">
+          {isAdminHome ? (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/">
+                <Home className="h-4 w-4 mr-1" />
+                Home
+              </Link>
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => router.push("/admin")}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Admin
+            </Button>
+          )}
+        </div>
+      </header>
+      {children}
+    </>
+  );
 }
