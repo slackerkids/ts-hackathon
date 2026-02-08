@@ -17,17 +17,6 @@ export function TMAProvider({ children }: PropsWithChildren) {
       miniApp.mount();
       miniApp.ready();
 
-      // Sync dark/light mode with Telegram theme
-      try {
-        if (miniApp.isDark()) {
-          document.documentElement.classList.add("dark");
-        } else {
-          document.documentElement.classList.remove("dark");
-        }
-      } catch {
-        // isDark may not be available outside Telegram
-      }
-
       setReady(true);
     } catch (err) {
       // If we're not inside Telegram (e.g. dev mode in browser),

@@ -252,16 +252,14 @@ export default function Home() {
               </CardContent>
             </Card>
           </Link>
-          {user?.role === "admin" && (
-            <Link href="/admin">
-              <Card className="hover:opacity-80 transition-opacity">
-                <CardContent className="pt-4 flex flex-col items-center gap-2">
-                  <Settings className="h-6 w-6 text-primary" />
-                  <span className="text-xs font-medium">Admin</span>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
+          <Link href="/admin">
+            <Card className="hover:opacity-80 transition-opacity">
+              <CardContent className="pt-4 flex flex-col items-center gap-2">
+                <Settings className="h-6 w-6 text-primary" />
+                <span className="text-xs font-medium">Admin</span>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </section>
     </div>

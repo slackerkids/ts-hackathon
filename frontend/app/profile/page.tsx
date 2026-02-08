@@ -11,7 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QRCodeSVG } from "qrcode.react";
-import { User as UserIcon, GraduationCap, Coins, Shield, QrCode, School, CalendarCheck } from "lucide-react";
+import { User as UserIcon, GraduationCap, Coins, Shield, QrCode, School, CalendarCheck, Palette } from "lucide-react";
+import { ThemeSwitcher } from "@/lib/theme";
 
 interface AttendanceRecord {
   id: number;
@@ -122,6 +123,18 @@ export default function ProfilePage() {
               <ProfileRow label="Joined" value={new Date(user.created_at).toLocaleDateString()} />
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Appearance */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Palette className="h-5 w-5" /> Appearance
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ThemeSwitcher />
         </CardContent>
       </Card>
 
